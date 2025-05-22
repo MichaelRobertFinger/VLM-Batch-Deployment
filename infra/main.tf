@@ -118,41 +118,27 @@ resource "aws_iam_role_policy_attachment" "batch_attach_s3" {
   policy_arn = aws_iam_policy.batch_s3_policy.arn
 }
 
-
-###### Compute Environment (using default VPC) ######
-
-data "aws_vpc" "default" {
-  default = true
-}
-
-data "aws_subnets" "default" {
+##########
+# VPC
+##########
+data "aws_subnets" "this" {
   filter {
-    name   = "vpc-id"
-    values = [data.aws_vpc.default.id]
+    name   = "tag:Name"
+    values = ["cloud-network-vpc/VPC/PrivateSubnet*"]
   }
 }
 
-# Create a security group that allows outbound internet access
-resource "aws_security_group" "batch_sg" {
-  name   = "batch_sg"
-  vpc_id = data.aws_vpc.default.id
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "batch-sg"
-  }
+#################
+# Security Groups
+#################
+data "aws_security_group" "selected" {
+  name = "cloud-network-vpc-sg"
 }
 
 resource "aws_batch_compute_environment" "batch_compute_env" {
   compute_environment_name = "demo-compute-environment"
-  type                     = "MANAGED"
-  service_role             = aws_iam_role.batch_service_role.arn # Role associated with Batch
+  type                    = "MANAGED"
+  service_role            = aws_iam_role.batch_service_role.arn
 
   compute_resources {
     type                = "EC2"
@@ -164,12 +150,12 @@ resource "aws_batch_compute_environment" "batch_compute_env" {
     desired_vcpus = var.desired_vcpus
     max_vcpus     = var.max_vcpus
 
-    security_group_ids = [aws_security_group.batch_sg.id]
-    subnets            = data.aws_subnets.default.ids
-    instance_role      = aws_iam_instance_profile.ecs_instance_role.arn # Role to roll up EC2 instances
+    security_group_ids = [data.aws_security_group.selected.id]
+    subnets           = data.aws_subnets.this.ids
+    instance_role     = aws_iam_instance_profile.ecs_instance_role.arn
   }
 
-  depends_on = [aws_iam_role_policy_attachment.batch_service_role] # To prevent a race condition during environment deletion 
+  depends_on = [aws_iam_role_policy_attachment.batch_service_role]
 }
 
 ###### Job Queue ######

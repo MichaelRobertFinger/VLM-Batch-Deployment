@@ -3,17 +3,25 @@ download-data:
 	uv run huggingface-cli download mathieu1256/FATURA2-invoices --repo-type dataset --local-dir data
 
 
-AWS_REGION ?= eu-central-1
+AWS_REGION ?= us-east-1
 ECR_REPO_NAME ?= demo-invoice-structured-outputs
 ECR_URI = ${ECR_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_NAME}
+ECR_ACCOUNT_ID ?= 381013051129
+CODEBUILD_PROJECT_NAME ?= vlm-batch-deployment-builder
 
 .PHONY: deploy
-deploy: ecr-login build tag push
+deploy: trigger-codebuild aws-batch-apply
 
 	# Require ECR_ACCOUNT_ID (fail if not provided)
 	ifndef ECR_ACCOUNT_ID
-	$(error ECR_ACCOUNT_ID is not set. Please provide it, e.g., `make deploy ECR_ACCOUNT_ID=123456789012`)
+	$(error ECR_ACCOUNT_ID is not set. Please provide it, e.g., `make deploy ECR_ACCOUNT_ID=381013051129`)
 	endif
+
+.PHONY: trigger-codebuild
+trigger-codebuild:
+	@echo "[INFO] Triggering CodeBuild project..."
+	aws codebuild start-build --project-name ${CODEBUILD_PROJECT_NAME} --region ${AWS_REGION}
+	@echo "[INFO] Build triggered. Check AWS Console for progress."
 
 ecr-login:
 	@echo "[INFO] Logging in to ECR..."

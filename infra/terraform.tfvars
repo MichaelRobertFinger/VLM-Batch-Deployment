@@ -5,7 +5,7 @@ max_vcpus     = 8
 instance_type = ["g6.xlarge"]
 
 # Container
-docker_image = "265890761777.dkr.ecr.eu-central-1.amazonaws.com/demo-invoice-structured-outputs"
+docker_image = "381013051129.dkr.ecr.us-east-1.amazonaws.com/demo-invoice-structured-outputs"
 
 ## Env variables
 s3_bucket                      = "demo-cdlc-invoice-parsing-batch-job"
